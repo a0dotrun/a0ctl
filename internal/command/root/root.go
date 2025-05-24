@@ -1,11 +1,13 @@
 package root
 
 import (
-	"github.com/a0dotrun/a0ctl/internal/command/version"
-	"github.com/spf13/cobra"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/a0dotrun/a0ctl/internal/command/initialize"
+	"github.com/a0dotrun/a0ctl/internal/command/version"
+	"github.com/spf13/cobra"
 )
 
 func New() *cobra.Command {
@@ -27,7 +29,10 @@ func New() *cobra.Command {
 		Use: exe, Short: short, Long: long,
 	}
 
-	root.AddCommand(version.New())
+	root.AddCommand(
+		version.New(),
+		initialize.New(),
+	)
 
 	return root
 }
