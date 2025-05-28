@@ -2,6 +2,7 @@ package initialize
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -125,10 +126,16 @@ func New() *cobra.Command {
 
 			// Handle errors (e.g., user exits with Ctrl+C)
 			if err != nil {
-				if err == huh.ErrUserAborted { // Specific error for user abort (Ctrl+C)
-					fmt.Fprintln(os.Stderr, "Initialization cancelled by user.")
+				if errors.Is(err, huh.ErrUserAborted) { // Specific error for user abort (Ctrl+C)
+					_, err := fmt.Fprintln(os.Stderr, "Initialization cancelled by user.")
+					if err != nil {
+						return err
+					}
 				} else {
-					fmt.Fprintln(os.Stderr, "Error during initialization:", err)
+					_, err := fmt.Fprintln(os.Stderr, "Error during initialization:", err)
+					if err != nil {
+						return err
+					}
 				}
 				return err // Or return nil if user cancellation isn't considered a CLI error
 			}
@@ -141,7 +148,13 @@ func New() *cobra.Command {
 
 			// At this point, 'projectName' and 'region' variables are populated.
 			// You would typically save these to a configuration file (e.g., a0ctl.yaml)
-			saveInitConfig(projectName, region)
+			err = saveInitConfig(projectName, region)
+			if err != nil {
+				_, err := fmt.Fprintln(os.Stderr, "Error saving configuration:", err)
+				if err != nil {
+					return err
+				}
+			}
 
 			return nil
 		},
