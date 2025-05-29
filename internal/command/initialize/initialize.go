@@ -13,7 +13,6 @@ import (
 )
 
 // readmeTxt contains the content for the README.txt file created in the .a0 directory.
-// Modify the text as needed to provide relevant information to the user.
 const readmeTxt = `> Why do I have a folder named ".a0" in my project?
 The ".a0" folder is created when you link a directory to a a0 project.
 

@@ -9,7 +9,7 @@ import (
 func New() *cobra.Command {
 	const (
 		short = "Show version information for the a0ctl command"
-		long  = "Shows version information for the a0ctl command itself - including version number and build date."
+		long  = "Shows version information for the a0ctl command itself - including version number and builder date."
 	)
 
 	return &cobra.Command{
