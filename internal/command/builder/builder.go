@@ -22,6 +22,7 @@ type ImageOptions struct {
 	Tag            string
 	Label          map[string]string
 	Platform       string
+	BuildOutDir    string
 }
 
 // New initializes and returns a new version Command.
@@ -41,7 +42,6 @@ func New() *cobra.Command {
 			if len(args) > 0 {
 				buildPath = args[0]
 			}
-
 			publish, _ := cmd.Flags().GetBool("publish")
 
 			appPath, err := filepath.Abs(buildPath)
@@ -49,7 +49,14 @@ func New() *cobra.Command {
 				return fmt.Errorf("failed to resolve app path: %w", err)
 			}
 
-			fmt.Printf("Build: %s\n", appPath)
+			fmt.Printf("app working directory: %s\n", appPath)
+
+			// Resolve app config from abs path
+			// Must run `$ a0 init`
+			appConfig, err := appconfig.ResolveAppConfig(appPath)
+			if err != nil {
+				return fmt.Errorf("failed to resolve app config: %w", err)
+			}
 
 			dockerfilePath := ResolveDockerfile(appPath)
 			if dockerfilePath == "" {
@@ -59,24 +66,24 @@ func New() *cobra.Command {
 			// create helper method to fetch docker ignores
 			dockerIgnorefilePath := ""
 
-			// TODO: @sanchitrk
-			// read from config file or global appconfig.Config store
-			name := "foobar"
-			region := "ap-south-1"
 			platform := "linux/amd64"
-			tag := NewBuildTag(name, "")
+			tag := NewBuildTag(appConfig.AppName, "")
 
-			appConfig := appconfig.NewConfig(name, region)
+			buildDir, err := buildOutputDir(appPath)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("build output directory: %s\n", buildDir)
 
 			imageOptions := ImageOptions{
-				AppName:        name,
+				AppName:        appConfig.AppName,
 				WorkingDir:     appPath,
 				DockerfilePath: dockerfilePath,
 				IgnorefilePath: dockerIgnorefilePath,
 				Platform:       platform,
 				Tag:            tag,
+				BuildOutDir:    buildDir,
 			}
-
 			ctx := cmd.Context()
 			img, err := DetermineImage(ctx, &appConfig, &imageOptions, publish)
 			if err != nil {
@@ -128,7 +135,7 @@ func DetermineImage(
 		return deploymentImage, nil
 	}
 
-	imageUrl, err := container.Export(ctx, "docker://"+imageOptions.Tag)
+	imageUrl, err := container.Export(ctx, fmt.Sprintf("%s/%s", imageOptions.BuildOutDir, imageOptions.Tag))
 	if err != nil {
 		return &DeploymentImage{}, fmt.Errorf("failed to export image to local Docker: %w", err)
 	}
@@ -165,4 +172,18 @@ func NewBuildTag(appName string, label string) string {
 		label = fmt.Sprintf("build-%s", ulid.Make())
 	}
 	return fmt.Sprintf("%s:%s", appName, label)
+}
+
+func buildOutputDir(appPath string) (string, error) {
+	a0Dir := filepath.Join(appPath, ".a0")
+	if _, err := os.Stat(a0Dir); os.IsNotExist(err) {
+		return "", fmt.Errorf(".a0 directory not found at %s", appPath)
+	}
+
+	buildsDir := filepath.Join(a0Dir, "builds")
+	if err := os.MkdirAll(buildsDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create builds directory: %w", err)
+	}
+
+	return buildsDir, nil
 }
