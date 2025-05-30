@@ -108,7 +108,6 @@ func DetermineImage(
 	if err != nil {
 		return &DeploymentImage{}, fmt.Errorf("failed to connect to Dagger: %w", err)
 	}
-
 	defer func(client *dagger.Client) {
 		err := client.Close()
 		if err != nil {
@@ -129,7 +128,12 @@ func DetermineImage(
 		return deploymentImage, nil
 	}
 
-	deploymentImage.ImageUrl = fmt.Sprintf("localhost/%s", imageOptions.Tag)
+	imageUrl, err := container.Export(ctx, "docker://"+imageOptions.Tag)
+	if err != nil {
+		return &DeploymentImage{}, fmt.Errorf("failed to export image to local Docker: %w", err)
+	}
+
+	deploymentImage.ImageUrl = imageUrl
 	return deploymentImage, nil
 }
 
