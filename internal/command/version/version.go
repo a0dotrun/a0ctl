@@ -17,6 +17,8 @@ func New() *cobra.Command {
 		Short: short,
 		Long:  long,
 		Run: func(cmd *cobra.Command, args []string) {
+			ctx := cmd.Context()
+			_ = ctx // Access the context here
 			fmt.Printf("a0ctl version %s\n", "0.0.1")
 		},
 	}

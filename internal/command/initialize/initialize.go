@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/a0dotrun/a0ctl/internal/appconfig"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,20 +14,19 @@ import (
 )
 
 // readmeTxt contains the content for the README.txt file created in the .a0 directory.
-const readmeTxt = `> Why do I have a folder named ".a0" in my project?
-The ".a0" folder is created when you link a directory to a a0 project.
+const readmeTxt = `> Why do I have a folder named ".a0" in my app?
+The ".a0" folder is created when you link a directory to a a0 app.
 
-> What does the "project.json" file contain?
-The "project.json" file contains:
-- The Name of the a0 project.
-- The Region where the project is hosted.
+> What does the "app.json" file contain?
+The "app.json" file contains:
+- The Name of the a0 app.
+- The Region where the app is hosted.
 
 > Should I commit the ".a0" folder?
 No, you should not share the ".a0" folder with anyone.
 `
 
-func saveInitConfig(projectName, region string) error {
-	// Get current directory
+func saveInitConfig(appName, region string) error {
 	currentDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get current directory: %w", err)
@@ -38,22 +38,14 @@ func saveInitConfig(projectName, region string) error {
 		return fmt.Errorf("failed to create .a0 directory: %w", err)
 	}
 
-	// Create project.json
-	config := struct {
-		ProjectName string `json:"name"`
-		Region      string `json:"region"`
-	}{
-		ProjectName: projectName,
-		Region:      region,
-	}
-
+	config := appconfig.NewConfig(appName, region)
 	configJSON, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(filepath.Join(a0Dir, "project.json"), configJSON, 0644); err != nil {
-		return fmt.Errorf("failed to write project.json: %w", err)
+	if err := os.WriteFile(filepath.Join(a0Dir, "app.json"), configJSON, 0644); err != nil {
+		return fmt.Errorf("failed to write app.json: %w", err)
 	}
 
 	// Create README.txt
@@ -66,38 +58,42 @@ func saveInitConfig(projectName, region string) error {
 }
 
 var (
-	projectName string
-	region      string
+	appName string
+	region  string
 )
 
 func New() *cobra.Command {
 	const (
 		short = "Initialize a0ctl configuration"
-		long  = "Initializes the a0ctl configuration with project name, region, etc."
+		long  = "Initializes the a0ctl configuration with app name, region, etc."
 	)
 	cmd := &cobra.Command{
 		Use:   "init",
 		Short: short,
 		Long:  long,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+			_ = ctx // Access the context here
 			// Create a new Huh form
 			form := huh.NewForm(
 				huh.NewGroup(
 					// Ask for Project Name
 					huh.NewInput().
-						Title("What is your project name?").
-						Value(&projectName). // Store the input in the projectName variable
+						Title("What is your app name?").
+						Value(&appName). // Store the input in the appName variable
+						// TODO:@sanchitrk
+						// improve the validation
+						// Return types for Errors?
 						Validate(func(str string) error {
 							if str == "" {
-								return fmt.Errorf("project name cannot be empty")
+								return fmt.Errorf("name cannot be empty")
 							}
 							if strings.Contains(str, " ") {
-								return fmt.Errorf("project name cannot contain spaces")
+								return fmt.Errorf("name cannot contain spaces")
 							}
 							return nil
 						}).
-						Description("Enter a unique name for your project."),
-
+						Description("Enter a name for your app."),
 					// Ask for Region
 					huh.NewSelect[string]().
 						Title("Choose a region:").
@@ -109,7 +105,7 @@ func New() *cobra.Command {
 							huh.NewOption("Asia Pacific (Sydney)", "ap-southeast-2"),
 						).
 						Value(&region). // Store the selected option in the region variable
-						Description("Select the primary region for your project resources."),
+						Description("Select the primary region for your app resources."),
 				),
 				// You can add more groups or fields here
 				// For example, a confirmation step:
@@ -145,9 +141,9 @@ func New() *cobra.Command {
 			//  return nil
 			// }
 
-			// At this point, 'projectName' and 'region' variables are populated.
+			// At this point, 'appName' and 'region' variables are populated.
 			// You would typically save these to a configuration file (e.g., a0ctl.yaml)
-			err = saveInitConfig(projectName, region)
+			err = saveInitConfig(appName, region)
 			if err != nil {
 				_, err := fmt.Fprintln(os.Stderr, "Error saving configuration:", err)
 				if err != nil {
