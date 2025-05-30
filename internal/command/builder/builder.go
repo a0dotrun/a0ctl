@@ -31,7 +31,7 @@ func New() *cobra.Command {
 		long  = "Build a0 app image based on proved Dockerfile and build config."
 	)
 
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:   "build [path]",
 		Short: short,
 		Long:  long,
@@ -41,6 +41,8 @@ func New() *cobra.Command {
 			if len(args) > 0 {
 				buildPath = args[0]
 			}
+
+			publish, _ := cmd.Flags().GetBool("publish")
 
 			appPath, err := filepath.Abs(buildPath)
 			if err != nil {
@@ -76,17 +78,19 @@ func New() *cobra.Command {
 			}
 
 			ctx := cmd.Context()
-			img, err := DetermineImage(ctx, &appConfig, &imageOptions)
+			img, err := DetermineImage(ctx, &appConfig, &imageOptions, publish)
 			if err != nil {
 				return err
 			}
 
-			fmt.Printf("built image with dagger...")
-			fmt.Println(img)
-
+			fmt.Printf("built and published image: %s\n", img.ImageUrl)
 			return nil
 		},
 	}
+
+	cmd.Flags().Bool("publish", false, "Publish the built image to registry")
+
+	return cmd
 }
 
 type DeploymentImage struct {
@@ -94,7 +98,7 @@ type DeploymentImage struct {
 }
 
 func DetermineImage(
-	ctx context.Context, appConfig *appconfig.Config, imageOptions *ImageOptions,
+	ctx context.Context, appConfig *appconfig.Config, imageOptions *ImageOptions, publish bool,
 ) (img *DeploymentImage, err error) {
 	if err := checkDockerDaemon(); err != nil {
 		return &DeploymentImage{}, err
@@ -112,16 +116,20 @@ func DetermineImage(
 		}
 	}(client)
 
-	imageUrl, err := client.Host().Directory(imageOptions.WorkingDir).
-		DockerBuild().
-		Publish(ctx, "ttl.sh/"+imageOptions.Tag)
+	deploymentImage := &DeploymentImage{}
 
-	if err != nil {
-		return &DeploymentImage{}, fmt.Errorf("failed to build and publish image: %w", err)
+	container := client.Host().Directory(imageOptions.WorkingDir).DockerBuild()
+
+	if publish {
+		imageUrl, err := container.Publish(ctx, "ttl.sh/"+imageOptions.Tag)
+		if err != nil {
+			return &DeploymentImage{}, fmt.Errorf("failed to build and publish image: %w", err)
+		}
+		deploymentImage.ImageUrl = imageUrl
+		return deploymentImage, nil
 	}
-	deploymentImage := &DeploymentImage{
-		ImageUrl: imageUrl,
-	}
+
+	deploymentImage.ImageUrl = fmt.Sprintf("localhost/%s", imageOptions.Tag)
 	return deploymentImage, nil
 }
 
