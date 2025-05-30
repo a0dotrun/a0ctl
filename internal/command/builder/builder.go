@@ -69,7 +69,7 @@ func New() *cobra.Command {
 			platform := "linux/amd64"
 			tag := NewBuildTag(appConfig.AppName, "")
 
-			buildDir, err := buildOutputDir(appPath)
+			buildDir, err := BuildOutputDir(appPath)
 			if err != nil {
 				return err
 			}
@@ -107,7 +107,7 @@ type DeploymentImage struct {
 func DetermineImage(
 	ctx context.Context, appConfig *appconfig.Config, imageOptions *ImageOptions, publish bool,
 ) (img *DeploymentImage, err error) {
-	if err := checkDockerDaemon(); err != nil {
+	if err := CheckDockerDaemon(); err != nil {
 		return &DeploymentImage{}, err
 	}
 
@@ -144,7 +144,7 @@ func DetermineImage(
 	return deploymentImage, nil
 }
 
-func checkDockerDaemon() error {
+func CheckDockerDaemon() error {
 	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
 	output, err := cmd.Output()
 	if err != nil {
@@ -174,7 +174,7 @@ func NewBuildTag(appName string, label string) string {
 	return fmt.Sprintf("%s:%s", appName, label)
 }
 
-func buildOutputDir(appPath string) (string, error) {
+func BuildOutputDir(appPath string) (string, error) {
 	a0Dir := filepath.Join(appPath, ".a0")
 	if _, err := os.Stat(a0Dir); os.IsNotExist(err) {
 		return "", fmt.Errorf(".a0 directory not found at %s", appPath)

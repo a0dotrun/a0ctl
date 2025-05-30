@@ -1,6 +1,7 @@
 package root
 
 import (
+	"github.com/a0dotrun/a0ctl/internal/command/builder/run"
 	"log"
 	"os"
 	"path/filepath"
@@ -34,6 +35,7 @@ func New() *cobra.Command {
 		version.New(),
 		initialize.New(),
 		builder.New(),
+		run.New(),
 	)
 
 	return root
