@@ -3,12 +3,15 @@ package builder
 import (
 	"context"
 	"dagger.io/dagger"
+	"errors"
 	"fmt"
 	"github.com/a0dotrun/a0ctl/internal/appconfig"
 	"github.com/oklog/ulid/v2"
 	"github.com/spf13/cobra"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 type ImageOptions struct {
@@ -93,9 +96,13 @@ type DeploymentImage struct {
 func DetermineImage(
 	ctx context.Context, appConfig *appconfig.Config, imageOptions *ImageOptions,
 ) (img *DeploymentImage, err error) {
+	if err := checkDockerDaemon(); err != nil {
+		return &DeploymentImage{}, err
+	}
+
 	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stderr))
 	if err != nil {
-		return &DeploymentImage{}, err
+		return &DeploymentImage{}, fmt.Errorf("failed to connect to Dagger: %w", err)
 	}
 
 	defer func(client *dagger.Client) {
@@ -110,12 +117,35 @@ func DetermineImage(
 		Publish(ctx, "ttl.sh/"+imageOptions.Tag)
 
 	if err != nil {
-		return &DeploymentImage{}, err
+		return &DeploymentImage{}, fmt.Errorf("failed to build and publish image: %w", err)
 	}
 	deploymentImage := &DeploymentImage{
 		ImageUrl: imageUrl,
 	}
 	return deploymentImage, nil
+}
+
+func checkDockerDaemon() error {
+	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
+	output, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			stderr := string(exitErr.Stderr)
+			if strings.Contains(stderr, "daemon") || strings.Contains(stderr, "connect") {
+				return fmt.Errorf(
+					"docker daemon is not running. Please start Docker and try again")
+			}
+		}
+		return fmt.Errorf(
+			"docker is not available or not installed. Please install Docker and ensure it's running")
+	}
+
+	if len(strings.TrimSpace(string(output))) == 0 {
+		return fmt.Errorf("docker daemon is not running. Please start Docker and try again")
+	}
+
+	return nil
 }
 
 func NewBuildTag(appName string, label string) string {
