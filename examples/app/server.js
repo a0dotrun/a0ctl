@@ -6,6 +6,8 @@ const server = http.createServer((req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-server.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+const host = '0.0.0.0'; // Listen on all interfaces
+
+server.listen(port, host, () => {
+  console.log(`Server running at http://${host}:${port}/`);
 });

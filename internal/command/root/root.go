@@ -35,7 +35,6 @@ func New() *cobra.Command {
 		version.New(),
 		initialize.New(),
 		builder.New(),
-		run.New(),
 	)
 
 	return root
