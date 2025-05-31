@@ -1,6 +1,7 @@
 package run
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"github.com/a0dotrun/a0ctl/helpers"
@@ -56,9 +57,6 @@ func New() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to resolve app path: %w", err)
 			}
-
-			fmt.Printf("app working directory: %s\n", appPath)
-
 			// Resolve app config from abs path to get appName
 			appConfig, err := appconfig.ResolveAppConfig(appPath)
 			if err != nil {
@@ -193,6 +191,10 @@ func RunContainer(ctx context.Context, runOptions *RunOptions) (string, error) {
 		return "", fmt.Errorf("failed to create container: %w", err)
 	}
 
+	// Flush stdout/stderr before streaming container logs
+	os.Stdout.Sync()
+	os.Stderr.Sync()
+
 	// Ensure container cleanup on exit/interrupt
 	defer func() {
 		if !runOptions.Detach {
@@ -214,6 +216,27 @@ func RunContainer(ctx context.Context, runOptions *RunOptions) (string, error) {
 	if runOptions.Detach {
 		return resp.ID, nil
 	}
+
+	// Stream container logs to stdout/stderr
+	logOptions := container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Follow:     true,
+	}
+
+	logs, err := dockerClient.ContainerLogs(ctx, resp.ID, logOptions)
+	if err != nil {
+		return "", fmt.Errorf("failed to get container logs: %w", err)
+	}
+	defer logs.Close()
+
+	// Stream logs to stdout with prefix in a goroutine
+	go func() {
+		scanner := bufio.NewScanner(logs)
+		for scanner.Scan() {
+			fmt.Printf("[%s]: %s\n", runOptions.AppName, scanner.Text())
+		}
+	}()
 
 	// Wait for container to finish if not detached
 	statusCh, errCh := dockerClient.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
