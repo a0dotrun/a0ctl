@@ -2,12 +2,15 @@ package builder
 
 import (
 	"context"
-	"dagger.io/dagger"
 	"errors"
 	"fmt"
 	"github.com/a0dotrun/a0ctl/internal/appconfig"
+	"github.com/docker/docker/api/types/build"
+	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/oklog/ulid/v2"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,7 +25,6 @@ type ImageOptions struct {
 	Tag            string
 	Label          map[string]string
 	Platform       string
-	BuildOutDir    string
 }
 
 // New initializes and returns a new version Command.
@@ -42,11 +44,7 @@ func New() *cobra.Command {
 			if len(args) > 0 {
 				buildPath = args[0]
 			}
-			publish, _ := cmd.Flags().GetBool("publish")
-			version, _ := cmd.Flags().GetString("version")
-			if version == "" {
-				version = "latest"
-			}
+			label, _ := cmd.Flags().GetString("label")
 
 			appPath, err := filepath.Abs(buildPath)
 			if err != nil {
@@ -71,13 +69,7 @@ func New() *cobra.Command {
 			dockerIgnorefilePath := ""
 
 			platform := "linux/amd64"
-			tag := NewBuildTag(appConfig.AppName, "", version)
-
-			buildDir, err := BuildOutputDir(appPath)
-			if err != nil {
-				return err
-			}
-			fmt.Printf("build output directory: %s\n", buildDir)
+			tag := NewBuildTag(appConfig.AppName, label)
 
 			imageOptions := ImageOptions{
 				AppName:        appConfig.AppName,
@@ -86,20 +78,17 @@ func New() *cobra.Command {
 				IgnorefilePath: dockerIgnorefilePath,
 				Platform:       platform,
 				Tag:            tag,
-				BuildOutDir:    buildDir,
 			}
 			ctx := cmd.Context()
-			img, err := DetermineImage(ctx, &appConfig, &imageOptions, publish)
+			img, err := BuildImage(ctx, &imageOptions)
 			if err != nil {
 				return err
 			}
 
-			fmt.Printf("built and published image: %s\n", img.ImageUrl)
+			fmt.Printf("built image: %s\n", img.ImageUrl)
 			return nil
 		},
 	}
-
-	cmd.Flags().Bool("publish", false, "Publish the built image to registry")
 
 	return cmd
 }
@@ -108,44 +97,64 @@ type DeploymentImage struct {
 	ImageUrl string
 }
 
-func DetermineImage(
-	ctx context.Context, appConfig *appconfig.Config, imageOptions *ImageOptions, publish bool,
-) (img *DeploymentImage, err error) {
+func BuildImage(ctx context.Context, imageOptions *ImageOptions) (img *DeploymentImage, err error) {
 	if err := CheckDockerDaemon(); err != nil {
 		return &DeploymentImage{}, err
 	}
 
-	client, err := dagger.Connect(ctx, dagger.WithLogOutput(os.Stderr))
+	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return &DeploymentImage{}, fmt.Errorf("failed to connect to Dagger: %w", err)
+		return &DeploymentImage{}, fmt.Errorf("failed to create Docker client: %w", err)
 	}
-	defer func(client *dagger.Client) {
-		err := client.Close()
+	defer func(dockerClient *client.Client) {
+		err := dockerClient.Close()
 		if err != nil {
-			fmt.Printf("failed to close dagger client: %v", err)
+
 		}
-	}(client)
+	}(dockerClient)
 
-	deploymentImage := &DeploymentImage{}
-
-	container := client.Host().Directory(imageOptions.WorkingDir).DockerBuild()
-
-	if publish {
-		imageUrl, err := container.Publish(ctx, "ttl.sh/"+imageOptions.Tag)
-		if err != nil {
-			return &DeploymentImage{}, fmt.Errorf("failed to build and publish image: %w", err)
-		}
-		deploymentImage.ImageUrl = imageUrl
-		return deploymentImage, nil
-	}
-
-	imageUrl, err := container.Export(ctx, fmt.Sprintf("%s/%s", imageOptions.BuildOutDir, imageOptions.Tag))
+	buildContext, err := archive.TarWithOptions(imageOptions.WorkingDir, &archive.TarOptions{})
 	if err != nil {
-		return &DeploymentImage{}, fmt.Errorf("failed to export image to local Docker: %w", err)
+		return &DeploymentImage{}, fmt.Errorf("failed to create build context: %w", err)
+	}
+	defer func(buildContext io.ReadCloser) {
+		err := buildContext.Close()
+		if err != nil {
+
+		}
+	}(buildContext)
+
+	buildOptions := build.ImageBuildOptions{
+		Tags:       []string{imageOptions.Tag},
+		Dockerfile: filepath.Base(imageOptions.DockerfilePath),
+		Remove:     true,
 	}
 
-	deploymentImage.ImageUrl = imageUrl
-	return deploymentImage, nil
+	if imageOptions.Platform != "" {
+		buildOptions.Platform = imageOptions.Platform
+	}
+
+	if imageOptions.Label != nil {
+		buildOptions.Labels = imageOptions.Label
+	}
+
+	buildResponse, err := dockerClient.ImageBuild(ctx, buildContext, buildOptions)
+	if err != nil {
+		return &DeploymentImage{}, fmt.Errorf("failed to build image: %w", err)
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(buildResponse.Body)
+
+	_, err = io.Copy(os.Stdout, buildResponse.Body)
+	if err != nil {
+		return &DeploymentImage{}, fmt.Errorf("failed to read build output: %w", err)
+	}
+
+	return &DeploymentImage{ImageUrl: imageOptions.Tag}, nil
 }
 
 func CheckDockerDaemon() error {
@@ -171,23 +180,9 @@ func CheckDockerDaemon() error {
 	return nil
 }
 
-func NewBuildTag(appName string, label, version string) string {
+func NewBuildTag(appName, label string) string {
 	if label == "" {
 		label = fmt.Sprintf("build-%s", ulid.Make())
 	}
 	return fmt.Sprintf("%s:%s", appName, label)
-}
-
-func BuildOutputDir(appPath string) (string, error) {
-	a0Dir := filepath.Join(appPath, ".a0")
-	if _, err := os.Stat(a0Dir); os.IsNotExist(err) {
-		return "", fmt.Errorf(".a0 directory not found at %s", appPath)
-	}
-
-	buildsDir := filepath.Join(a0Dir, "builds")
-	if err := os.MkdirAll(buildsDir, 0755); err != nil {
-		return "", fmt.Errorf("failed to create builds directory: %w", err)
-	}
-
-	return buildsDir, nil
 }
