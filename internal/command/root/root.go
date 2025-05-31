@@ -7,6 +7,7 @@ import (
 
 	"github.com/a0dotrun/a0ctl/internal/command/builder"
 	"github.com/a0dotrun/a0ctl/internal/command/initialize"
+	"github.com/a0dotrun/a0ctl/internal/command/run"
 	"github.com/a0dotrun/a0ctl/internal/command/version"
 	"github.com/spf13/cobra"
 )
@@ -34,6 +35,7 @@ func New() *cobra.Command {
 		version.New(),
 		initialize.New(),
 		builder.New(),
+		run.New(),
 	)
 
 	return root

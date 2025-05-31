@@ -2,8 +2,8 @@ package builder
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"github.com/a0dotrun/a0ctl/helpers"
 	"github.com/a0dotrun/a0ctl/internal/appconfig"
 	"github.com/docker/docker/api/types/build"
 	"github.com/docker/docker/client"
@@ -12,9 +12,7 @@ import (
 	"github.com/spf13/cobra"
 	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"strings"
 )
 
 type ImageOptions struct {
@@ -101,7 +99,7 @@ type DeploymentImage struct {
 }
 
 func BuildImage(ctx context.Context, imageOptions *ImageOptions) (img *DeploymentImage, err error) {
-	if err := CheckDockerDaemon(); err != nil {
+	if err := helpers.CheckDockerDaemon(); err != nil {
 		return &DeploymentImage{}, err
 	}
 
@@ -152,29 +150,6 @@ func BuildImage(ctx context.Context, imageOptions *ImageOptions) (img *Deploymen
 	}
 
 	return &DeploymentImage{ImageUrl: imageOptions.Tag}, nil
-}
-
-func CheckDockerDaemon() error {
-	cmd := exec.Command("docker", "version", "--format", "{{.Server.Version}}")
-	output, err := cmd.Output()
-	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			stderr := string(exitErr.Stderr)
-			if strings.Contains(stderr, "daemon") || strings.Contains(stderr, "connect") {
-				return fmt.Errorf(
-					"docker daemon is not running. Please start Docker and try again")
-			}
-		}
-		return fmt.Errorf(
-			"docker is not available or not installed. Please install Docker and ensure it's running")
-	}
-
-	if len(strings.TrimSpace(string(output))) == 0 {
-		return fmt.Errorf("docker daemon is not running. Please start Docker and try again")
-	}
-
-	return nil
 }
 
 func NewBuildTag(appName, tag string) string {
