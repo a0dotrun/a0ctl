@@ -43,6 +43,10 @@ func New() *cobra.Command {
 				buildPath = args[0]
 			}
 			publish, _ := cmd.Flags().GetBool("publish")
+			version, _ := cmd.Flags().GetString("version")
+			if version == "" {
+				version = "latest"
+			}
 
 			appPath, err := filepath.Abs(buildPath)
 			if err != nil {
@@ -67,7 +71,7 @@ func New() *cobra.Command {
 			dockerIgnorefilePath := ""
 
 			platform := "linux/amd64"
-			tag := NewBuildTag(appConfig.AppName, "")
+			tag := NewBuildTag(appConfig.AppName, "", version)
 
 			buildDir, err := BuildOutputDir(appPath)
 			if err != nil {
@@ -167,7 +171,7 @@ func CheckDockerDaemon() error {
 	return nil
 }
 
-func NewBuildTag(appName string, label string) string {
+func NewBuildTag(appName string, label, version string) string {
 	if label == "" {
 		label = fmt.Sprintf("build-%s", ulid.Make())
 	}
