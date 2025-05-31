@@ -23,7 +23,7 @@ type ImageOptions struct {
 	DockerfilePath string
 	IgnorefilePath string
 	Tag            string
-	Label          map[string]string
+	Labels         map[string]string
 	Platform       string
 }
 
@@ -44,13 +44,13 @@ func New() *cobra.Command {
 			if len(args) > 0 {
 				buildPath = args[0]
 			}
-			label, _ := cmd.Flags().GetString("label")
+			tag, _ := cmd.Flags().GetString("tag")
+			platform, _ := cmd.Flags().GetString("platform")
 
 			appPath, err := filepath.Abs(buildPath)
 			if err != nil {
 				return fmt.Errorf("failed to resolve app path: %w", err)
 			}
-
 			fmt.Printf("app working directory: %s\n", appPath)
 
 			// Resolve app config from abs path
@@ -68,8 +68,7 @@ func New() *cobra.Command {
 			// create helper method to fetch docker ignores
 			dockerIgnorefilePath := ""
 
-			platform := "linux/amd64"
-			tag := NewBuildTag(appConfig.AppName, label)
+			tag = NewBuildTag(appConfig.AppName, tag)
 
 			imageOptions := ImageOptions{
 				AppName:        appConfig.AppName,
@@ -89,6 +88,10 @@ func New() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().String("tag", "", "Tag for the built image (e.g., latest, v1.0.0)")
+	cmd.Flags().String(
+		"platform", "", "Platform for the built image (e.g., linux/amd64, linux/arm64)")
 
 	return cmd
 }
@@ -128,14 +131,8 @@ func BuildImage(ctx context.Context, imageOptions *ImageOptions) (img *Deploymen
 		Tags:       []string{imageOptions.Tag},
 		Dockerfile: filepath.Base(imageOptions.DockerfilePath),
 		Remove:     true,
-	}
-
-	if imageOptions.Platform != "" {
-		buildOptions.Platform = imageOptions.Platform
-	}
-
-	if imageOptions.Label != nil {
-		buildOptions.Labels = imageOptions.Label
+		Platform:   imageOptions.Platform,
+		Labels:     imageOptions.Labels,
 	}
 
 	buildResponse, err := dockerClient.ImageBuild(ctx, buildContext, buildOptions)
@@ -180,9 +177,9 @@ func CheckDockerDaemon() error {
 	return nil
 }
 
-func NewBuildTag(appName, label string) string {
-	if label == "" {
-		label = fmt.Sprintf("build-%s", ulid.Make())
+func NewBuildTag(appName, tag string) string {
+	if tag == "" {
+		tag = fmt.Sprintf("build-%s", ulid.Make())
 	}
-	return fmt.Sprintf("%s:%s", appName, label)
+	return fmt.Sprintf("%s:%s", appName, tag)
 }
