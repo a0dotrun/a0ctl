@@ -1,4 +1,4 @@
-package builder
+package mcpbuilder
 
 import (
 	"github.com/a0dotrun/a0ctl/helpers"

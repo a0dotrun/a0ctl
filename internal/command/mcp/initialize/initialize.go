@@ -1,4 +1,4 @@
-package initialize
+package mcpinitialize
 
 import (
 	"encoding/json"

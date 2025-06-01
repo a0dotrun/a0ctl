@@ -5,9 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/a0dotrun/a0ctl/internal/command/builder"
-	"github.com/a0dotrun/a0ctl/internal/command/initialize"
-	"github.com/a0dotrun/a0ctl/internal/command/run"
+	"github.com/a0dotrun/a0ctl/internal/command/mcp/command"
 	"github.com/a0dotrun/a0ctl/internal/command/version"
 	"github.com/spf13/cobra"
 )
@@ -33,9 +31,7 @@ func New() *cobra.Command {
 
 	root.AddCommand(
 		version.New(),
-		initialize.New(),
-		builder.New(),
-		run.New(),
+		mcp.New(),
 	)
 
 	return root

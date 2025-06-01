@@ -28,8 +28,8 @@ type RunOptions struct {
 // New initializes and returns a new run Command.
 func New() *cobra.Command {
 	const (
-		short = "Run a0 app container."
-		long  = "Run a0 app container from the built image using --tag flag."
+		short = "Run a0 mcp container."
+		long  = "Run a0 mcp container from the built image using --tag flag."
 	)
 
 	cmd := &cobra.Command{
