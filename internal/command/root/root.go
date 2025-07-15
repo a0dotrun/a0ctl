@@ -1,3 +1,6 @@
+// Package root implements the root entry point for registered commands.
+//
+// Register other commands to this root command
 package root
 
 import (
@@ -5,8 +8,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/a0dotrun/a0ctl/internal/command/mcp/command"
 	"github.com/a0dotrun/a0ctl/internal/command/version"
+
+	"github.com/a0dotrun/a0ctl/internal/command/auth"
 	"github.com/spf13/cobra"
 )
 
@@ -31,7 +35,7 @@ func New() *cobra.Command {
 
 	root.AddCommand(
 		version.New(),
-		mcp.New(),
+		auth.New(),
 	)
 
 	return root

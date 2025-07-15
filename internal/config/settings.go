@@ -1,0 +1,101 @@
+package config
+
+import (
+	"fmt"
+	"path"
+	"path/filepath"
+	"sync"
+
+	"github.com/a0dotrun/a0ctl/internal/cli"
+	"github.com/a0dotrun/a0ctl/internal/flags"
+	"github.com/kirsle/configdir"
+	"github.com/spf13/viper"
+)
+
+const (
+	a0DefaultBaseURL = "https://api.a0.run"
+)
+
+type Settings struct {
+	changed bool
+}
+
+var (
+	settings *Settings
+	mu       sync.Mutex
+)
+
+func ReadSettings() (*Settings, error) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if settings != nil {
+		return settings, nil
+	}
+
+	settings = &Settings{}
+
+	configPath := configdir.LocalConfig("a0")
+	viper.BindEnv("config-path", "A0_CONFIG_PATH")
+	viper.BindEnv("baseURL", "A0_API_BASEURL")
+
+	configPathFlag := viper.GetString("config-path")
+	if len(configPathFlag) > 0 {
+		configPath = configPathFlag
+	}
+
+	err := configdir.MakePath(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	viper.SetConfigName("settings")
+	viper.SetConfigType("json")
+	viper.AddConfigPath(configPath)
+	configFile := path.Join(configPath, "settings.json")
+	if abs, err := filepath.Abs(configFile); err == nil {
+		configFile = abs
+	}
+
+	if err := viper.ReadInConfig(); err != nil {
+		switch err.(type) {
+		case viper.ConfigFileNotFoundError:
+			// Force config creation
+			if err := viper.SafeWriteConfig(); err != nil {
+				return nil, err
+			}
+		case viper.ConfigParseError:
+			if flags.ResetConfig() {
+				viper.WriteConfig()
+				break
+			}
+			warning := cli.Warn("Warning")
+			// FIXME: requires implementation
+			flag := cli.Emph("--reset-config")
+			fmt.Printf("%s: could not parse JSON config from file %s\n", warning, cli.Emph(configFile))
+			fmt.Printf("Fix the syntax errors on the file, or use the %s flag to replace it with a fresh one.\n", flag)
+			fmt.Printf("E.g. a0ctl auth login --reset-config\n")
+			return nil, err
+		default:
+			return nil, err
+		}
+	}
+
+	return settings, nil
+}
+
+func (s *Settings) GetToken() string {
+	return viper.GetString("token")
+}
+
+func (s *Settings) GetBaseURL() string {
+	return viper.GetString("baseURL")
+}
+
+func (s *Settings) GetDefaultBaseURL() string {
+	return a0DefaultBaseURL
+}
+
+func (s *Settings) GetUsername() string {
+	return viper.GetString("username")
+}

@@ -1,15 +1,17 @@
+// Package version provides the command to show the version of a0ctl.
 package version
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
 )
 
 // New initializes and returns a new version Command.
 func New() *cobra.Command {
 	const (
-		short = "Show version information for the a0ctl command"
-		long  = "Shows version information for the a0ctl command itself - including version number and builder date."
+		short = "Show version information for the a0ctl CLI."
+		long  = "Shows version information for the a0ctl CLI."
 	)
 
 	return &cobra.Command{
