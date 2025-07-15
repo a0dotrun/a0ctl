@@ -9,7 +9,10 @@ var resetConfig bool
 
 func AddResetConfigFlag(cmd *cobra.Command) {
 	cmd.PersistentFlags().BoolVar(&resetConfig, "reset-config", false, "")
-	cmd.PersistentFlags().MarkHidden("reset-config")
+	err := cmd.PersistentFlags().MarkHidden("reset-config")
+	if err != nil {
+		return
+	}
 }
 
 func ResetConfig() bool {

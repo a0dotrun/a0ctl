@@ -2,8 +2,12 @@
   <dictionary name="project">
     <words>
       <w>appconfig</w>
+      <w>ctlversion</w>
       <w>dockerfilepath</w>
+      <w>dotrun</w>
+      <w>emph</w>
       <w>ignorefile</w>
+      <w>whoami</w>
     </words>
   </dictionary>
 </component>

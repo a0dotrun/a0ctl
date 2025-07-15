@@ -2,17 +2,24 @@ package api
 
 import (
 	"fmt"
+	"io"
 	"net/http"
 )
 
 type TokensClient client
 
+// Validate FIXME: how is token passed?
 func (c *TokensClient) Validate(token string) (int64, error) {
 	r, err := c.client.Get("/v1/auth/validate", nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to request validation: %s", err)
 	}
-	defer r.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(r.Body)
 
 	if r.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("failed to validate token: %w", parseResponseError(r))

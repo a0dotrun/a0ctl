@@ -6,15 +6,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	config2 "github.com/a0dotrun/a0ctl/internal/config"
 	"io"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"runtime"
 
+	"github.com/a0dotrun/a0ctl/internal/config"
+
 	"github.com/a0dotrun/a0ctl/internal/flags"
-	"github.com/a0dotrun/a0ctl/internal/helpers"
 )
 
 type ErrorResponseDetails struct {
@@ -72,7 +72,7 @@ func NewClient(baseURL *url.URL, token, username string) *Client {
 
 // AuthedClient returns authenticated client
 func AuthedClient() (*Client, error) {
-	token, err := helpers.GetAccessToken()
+	token, err := GetAccessToken()
 	if err != nil {
 		return nil, err
 	}
@@ -82,13 +82,13 @@ func AuthedClient() (*Client, error) {
 // MakeClient builds a new API client with the provided token.
 // Reads settings from configdir.
 func MakeClient(token string) (*Client, error) {
-	urlStr := config2.GetA0URL()
+	urlStr := config.GetA0URL()
 	a0URL, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, fmt.Errorf("error creating a0ctl client: could not parse a0 URL %s: %w", urlStr, err)
 	}
 
-	settings, err := config2.ReadSettings()
+	settings, err := config.ReadSettings()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a0ctl client: could not read settings: %w", err)
 	}
@@ -103,15 +103,15 @@ func (c *Client) newRequest(
 	if _, exists := extraHeaders["Content-Type"]; !exists {
 		return nil, errors.New("content type is required")
 	}
-	url, err := url.Parse(c.BaseURL.String())
+	baseURL, err := url.Parse(c.BaseURL.String())
 	if err != nil {
 		return nil, err
 	}
-	url, err = url.Parse(urlPath)
+	baseURL, err = baseURL.Parse(urlPath)
 	if err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest(method, url.String(), body)
+	req, err := http.NewRequest(method, baseURL.String(), body)
 	if err != nil {
 		return nil, err
 	}

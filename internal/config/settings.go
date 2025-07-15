@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -36,15 +37,21 @@ func ReadSettings() (*Settings, error) {
 	settings = &Settings{}
 
 	configPath := configdir.LocalConfig("a0")
-	viper.BindEnv("config-path", "A0_CONFIG_PATH")
-	viper.BindEnv("baseURL", "A0_API_BASEURL")
+	err := viper.BindEnv("config-path", "A0_CONFIG_PATH")
+	if err != nil {
+		return nil, err
+	}
+	err = viper.BindEnv("baseURL", "A0_API_BASEURL")
+	if err != nil {
+		return nil, err
+	}
 
 	configPathFlag := viper.GetString("config-path")
 	if len(configPathFlag) > 0 {
 		configPath = configPathFlag
 	}
 
-	err := configdir.MakePath(configPath)
+	err = configdir.MakePath(configPath)
 	if err != nil {
 		return nil, err
 	}
@@ -58,15 +65,20 @@ func ReadSettings() (*Settings, error) {
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
-		switch err.(type) {
-		case viper.ConfigFileNotFoundError:
+		var configFileNotFoundError viper.ConfigFileNotFoundError
+		var configParseError viper.ConfigParseError
+		switch {
+		case errors.As(err, &configFileNotFoundError):
 			// Force config creation
 			if err := viper.SafeWriteConfig(); err != nil {
 				return nil, err
 			}
-		case viper.ConfigParseError:
+		case errors.As(err, &configParseError):
 			if flags.ResetConfig() {
-				viper.WriteConfig()
+				err := viper.WriteConfig()
+				if err != nil {
+					return nil, err
+				}
 				break
 			}
 			warning := cli.Warn("Warning")

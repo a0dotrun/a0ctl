@@ -1,18 +1,34 @@
-// Package helpers provides utility functions for the a0ctl CLI tool.
-package helpers
+package api
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/a0dotrun/a0ctl/internal/config"
-
 	"github.com/a0dotrun/a0ctl/internal/cli"
+	"github.com/a0dotrun/a0ctl/internal/config"
 )
 
-const accessTokenEnv = "A0_API_TOKEN"
+// IsJWTTokenValid validates token.
+func IsJWTTokenValid(token string) bool {
+	if len(token) == 0 {
+		return false
+	}
 
-var ErrNotLoggedIn = fmt.Errorf("user not logged in, please login with %s", cli.Emph("a0ctl auth login"))
+	client, err := MakeClient(token)
+	if err != nil {
+		return false
+	}
+
+	_, err = client.Tokens.Validate(token)
+	if err != nil {
+		return false
+	}
+
+	return false
+}
+
+var ErrNotLoggedIn = fmt.Errorf(
+	"user not logged in, please login with %s", cli.Emph("a0ctl auth login"))
 
 func GetAccessToken() (string, error) {
 	token, err := envAccessToken()
@@ -38,20 +54,12 @@ func GetAccessToken() (string, error) {
 
 // envAccessToken retrieves the access token from the environment variable.
 func envAccessToken() (string, error) {
-	token := os.Getenv(accessTokenEnv)
+	token := os.Getenv(config.AccessTokenEnv)
 	if token == "" {
 		return "", nil
 	}
 	if !IsJWTTokenValid(token) {
-		return "", fmt.Errorf("token in %s env var is invalid. Update the env var with a valid value, or unset it to use a token from the configuration file", accessTokenEnv)
+		return "", fmt.Errorf("token in %s env var is invalid. Update the env var with a valid value, or unset it to use a token from the configuration file", config.AccessTokenEnv)
 	}
 	return token, nil
-}
-
-func IsJWTTokenValid(token string) bool {
-	if len(token) == 0 {
-		return false
-	}
-
-	return false
 }

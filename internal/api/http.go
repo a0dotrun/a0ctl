@@ -46,14 +46,23 @@ func (c *Client) Upload(path string, fileData *os.File) (*http.Response, error) 
 	go func() {
 		formFile, err := writer.CreateFormFile("file", fileData.Name())
 		if err != nil {
-			bodyWriter.CloseWithError(err)
+			err := bodyWriter.CloseWithError(err)
+			if err != nil {
+				return
+			}
 			return
 		}
 		if _, err := io.Copy(formFile, fileData); err != nil {
-			bodyWriter.CloseWithError(err)
+			err := bodyWriter.CloseWithError(err)
+			if err != nil {
+				return
+			}
 			return
 		}
-		bodyWriter.CloseWithError(writer.Close())
+		err = bodyWriter.CloseWithError(writer.Close())
+		if err != nil {
+			return
+		}
 	}()
 	req, err := c.newRequest("POST", path, body, Header("Content-Type", writer.FormDataContentType()))
 	if err != nil {

@@ -4,7 +4,10 @@ import "github.com/a0dotrun/a0ctl/internal/command/root"
 
 func main() {
 	cmd := root.New()
-	cmd.Execute()
+	err := cmd.Execute()
+	if err != nil {
+		return
+	}
 }
 
 //
