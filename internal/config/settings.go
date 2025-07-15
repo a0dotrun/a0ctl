@@ -111,3 +111,8 @@ func (s *Settings) GetDefaultBaseURL() string {
 func (s *Settings) GetUsername() string {
 	return viper.GetString("username")
 }
+
+func (s *Settings) SetToken(token string) {
+	viper.Set("token", token)
+	s.changed = true
+}

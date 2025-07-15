@@ -2,7 +2,6 @@
 package api
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,8 +17,8 @@ import (
 )
 
 type ErrorResponseDetails struct {
-	Error interface{} `json:"error"`
-	Code  string      `json:"code"`
+	Error any    `json:"error"`
+	Code  string `json:"code"`
 }
 
 func unmarshal[T any](r *http.Response) (T, error) {
@@ -32,11 +31,12 @@ func unmarshal[T any](r *http.Response) (T, error) {
 	return *t, err
 }
 
-func marshal(data interface{}) (io.Reader, error) {
-	buf := &bytes.Buffer{}
-	err := json.NewEncoder(buf).Encode(data)
-	return buf, err
-}
+// TODO: enable once reuired
+// func marshal(data any) (io.Reader, error) {
+// 	buf := &bytes.Buffer{}
+// 	err := json.NewEncoder(buf).Encode(data)
+// 	return buf, err
+// }
 
 // Client represents the API client for a0ctl.
 type Client struct {
