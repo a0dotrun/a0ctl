@@ -19,6 +19,7 @@ func GetA0URL() string {
 	return url
 }
 
+// TryToPersistChanges forces config changes to be written to disk.
 func TryToPersistChanges() error {
 	if err := viper.WriteConfig(); err != nil {
 		return fmt.Errorf("failed to persist a0 settings file: %w", err)
@@ -26,6 +27,8 @@ func TryToPersistChanges() error {
 	return nil
 }
 
+// PersistChanges checks if there are any changes to the settings then persists them.
+// More safer option
 func PersistChanges() {
 	if settings == nil || !settings.changed {
 		return

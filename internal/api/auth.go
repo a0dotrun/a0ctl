@@ -19,12 +19,12 @@ func IsJWTTokenValid(token string) bool {
 		return false
 	}
 
-	_, err = client.Tokens.Validate()
+	r, err := client.Tokens.Validate()
 	if err != nil {
 		return false
 	}
 
-	return false
+	return r
 }
 
 var ErrNotLoggedIn = fmt.Errorf(
@@ -39,6 +39,8 @@ func GetAccessToken() (string, error) {
 		return token, nil
 	}
 
+	// env has no token, read from settings.
+	// env variable takes precedence over settings file.
 	settings, err := config.ReadSettings()
 	if err != nil {
 		return "", fmt.Errorf("could not read token from settings file: %w", err)

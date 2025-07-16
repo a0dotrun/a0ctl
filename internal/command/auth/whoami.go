@@ -11,7 +11,7 @@ import (
 func newWhoAMI() *cobra.Command {
 	const (
 		use   = "whoami"
-		short = "Show the currently logged in user."
+		short = "Show the current logged in user or token user."
 	)
 	cmd := &cobra.Command{
 		Use:               use,
@@ -25,19 +25,16 @@ func newWhoAMI() *cobra.Command {
 
 func whoAmI(cmd *cobra.Command, _ []string) error {
 	cmd.SilenceUsage = true
-	_, err := api.AuthedClient()
+	client, err := api.AuthedClient()
 	if err != nil {
 		return err
 	}
 
-	username := "sanchitrk"
+	user, err := client.Users.GetUser()
+	if err != nil {
+		return err
+	}
 
-	fmt.Printf("%s\n", username)
-	// user, err := client.Users.GetUser()
-	// if err != nil {
-	// 	return err
-	// }
-	// fmt.Printf("%s\n", user.Username)
-	//
+	fmt.Printf("%s\n", user.Username)
 	return nil
 }

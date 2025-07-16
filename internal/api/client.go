@@ -32,6 +32,7 @@ type Client struct {
 	base *client
 
 	Tokens *TokensClient
+	Users  *UsersClient
 }
 
 // client struct that will be aliases by all other clients
@@ -48,7 +49,12 @@ func NewClient(baseURL *url.URL, token, username string) *Client {
 	}
 
 	c.base = &client{client: c}
+
+	// Note:
+	// It's important to register other client references
+	// otherwise ends up with nil pointer deference panics
 	c.Tokens = (*TokensClient)(c.base)
+	c.Users = (*UsersClient)(c.base)
 
 	return c
 }
