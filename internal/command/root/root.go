@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/a0dotrun/a0ctl/internal/command/config"
 	"github.com/a0dotrun/a0ctl/internal/command/version"
 
 	"github.com/a0dotrun/a0ctl/internal/command/auth"
@@ -36,6 +37,7 @@ func New() *cobra.Command {
 	root.AddCommand(
 		version.New(),
 		auth.New(),
+		config.New(),
 	)
 
 	return root
