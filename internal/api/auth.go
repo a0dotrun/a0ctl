@@ -19,7 +19,7 @@ func IsJWTTokenValid(token string) bool {
 		return false
 	}
 
-	_, err = client.Tokens.Validate(token)
+	_, err = client.Tokens.Validate()
 	if err != nil {
 		return false
 	}
@@ -54,12 +54,12 @@ func GetAccessToken() (string, error) {
 
 // envAccessToken retrieves the access token from the environment variable.
 func envAccessToken() (string, error) {
-	token := os.Getenv(config.AccessTokenEnv)
+	token := os.Getenv(config.EnvAccessToken)
 	if token == "" {
 		return "", nil
 	}
 	if !IsJWTTokenValid(token) {
-		return "", fmt.Errorf("token in %s env var is invalid. Update the env var with a valid value, or unset it to use a token from the configuration file", config.AccessTokenEnv)
+		return "", fmt.Errorf("token in %s env var is invalid. Update the env var with a valid value, or unset it to use a token from the configuration file", config.EnvAccessToken)
 	}
 	return token, nil
 }

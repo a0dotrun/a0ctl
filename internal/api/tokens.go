@@ -8,8 +8,8 @@ import (
 
 type TokensClient client
 
-// Validate FIXME: how is token passed?
-func (c *TokensClient) Validate(token string) (int64, error) {
+// Validate validates the client's token
+func (c *TokensClient) Validate() (int64, error) {
 	r, err := c.client.Get("/v1/auth/validate", nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to request validation: %s", err)

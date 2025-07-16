@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-const AccessTokenEnv = "A0_API_TOKEN"
+const EnvAccessToken = "A0_API_TOKEN"
 
 func GetA0URL() string {
 	settings, _ := ReadSettings()
@@ -21,7 +21,7 @@ func GetA0URL() string {
 
 func TryToPersistChanges() error {
 	if err := viper.WriteConfig(); err != nil {
-		return fmt.Errorf("failed to persist turso settings file: %w", err)
+		return fmt.Errorf("failed to persist a0 settings file: %w", err)
 	}
 	return nil
 }

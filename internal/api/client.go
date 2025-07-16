@@ -21,23 +21,6 @@ type ErrorResponseDetails struct {
 	Code  string `json:"code"`
 }
 
-func unmarshal[T any](r *http.Response) (T, error) {
-	d, err := io.ReadAll(r.Body)
-	t := new(T)
-	if err != nil {
-		return *t, err
-	}
-	err = json.Unmarshal(d, &t)
-	return *t, err
-}
-
-// TODO: enable once reuired
-// func marshal(data any) (io.Reader, error) {
-// 	buf := &bytes.Buffer{}
-// 	err := json.NewEncoder(buf).Encode(data)
-// 	return buf, err
-// }
-
 // Client represents the API client for a0ctl.
 type Client struct {
 	BaseURL    *url.URL
@@ -80,7 +63,6 @@ func AuthedClient() (*Client, error) {
 }
 
 // MakeClient builds a new API client with the provided token.
-// Reads settings from configdir.
 func MakeClient(token string) (*Client, error) {
 	urlStr := config.GetA0URL()
 	a0URL, err := url.Parse(urlStr)
@@ -195,3 +177,20 @@ func parseResponseError(res *http.Response) error {
 	}
 	return fmt.Errorf("response failed with status %s", res.Status)
 }
+
+func unmarshal[T any](r *http.Response) (T, error) {
+	d, err := io.ReadAll(r.Body)
+	t := new(T)
+	if err != nil {
+		return *t, err
+	}
+	err = json.Unmarshal(d, &t)
+	return *t, err
+}
+
+// TODO: enable once required
+// func marshal(data any) (io.Reader, error) {
+// 	buf := &bytes.Buffer{}
+// 	err := json.NewEncoder(buf).Encode(data)
+// 	return buf, err
+// }

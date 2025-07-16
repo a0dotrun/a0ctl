@@ -116,3 +116,8 @@ func (s *Settings) SetToken(token string) {
 	viper.Set("token", token)
 	s.changed = true
 }
+
+func (s *Settings) SetUsername(username string) {
+	viper.Set("username", username)
+	s.changed = true
+}
