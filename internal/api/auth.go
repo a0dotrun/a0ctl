@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/a0dotrun/a0ctl/internal/cli"
-	"github.com/a0dotrun/a0ctl/internal/config"
+	"github.com/a0dotrun/a0ctl/internal/settings"
 )
 
 // IsJWTTokenValid validates token.
@@ -39,14 +39,14 @@ func GetAccessToken() (string, error) {
 		return token, nil
 	}
 
-	// env has no token, read from settings.
-	// env variable takes precedence over settings file.
-	settings, err := config.ReadSettings()
+	// env has no token, read from config.
+	// env variable takes precedence over config file.
+	config, err := settings.ReadSettings()
 	if err != nil {
 		return "", fmt.Errorf("could not read token from settings file: %w", err)
 	}
 
-	token = settings.GetToken()
+	token = config.GetToken()
 	if !IsJWTTokenValid(token) {
 		return "", ErrNotLoggedIn
 	}
@@ -56,12 +56,12 @@ func GetAccessToken() (string, error) {
 
 // envAccessToken retrieves the access token from the environment variable.
 func envAccessToken() (string, error) {
-	token := os.Getenv(config.EnvAccessToken)
+	token := os.Getenv(settings.EnvAccessToken)
 	if token == "" {
 		return "", nil
 	}
 	if !IsJWTTokenValid(token) {
-		return "", fmt.Errorf("token in %s env var is invalid. Update the env var with a valid value, or unset it to use a token from the configuration file", config.EnvAccessToken)
+		return "", fmt.Errorf("token in %s env var is invalid. Update the env var with a valid value, or unset it to use a token from the configuration file", settings.EnvAccessToken)
 	}
 	return token, nil
 }

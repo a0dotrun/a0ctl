@@ -1,4 +1,5 @@
-package config
+// Package settings provides config management for CLI
+package settings
 
 import (
 	"errors"

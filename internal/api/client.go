@@ -11,7 +11,7 @@ import (
 	"net/url"
 	"runtime"
 
-	"github.com/a0dotrun/a0ctl/internal/config"
+	"github.com/a0dotrun/a0ctl/internal/settings"
 
 	"github.com/a0dotrun/a0ctl/internal/flags"
 )
@@ -70,18 +70,18 @@ func AuthedClient() (*Client, error) {
 
 // MakeClient builds a new API client with the provided token.
 func MakeClient(token string) (*Client, error) {
-	urlStr := config.GetA0URL()
+	urlStr := settings.GetA0URL()
 	a0URL, err := url.Parse(urlStr)
 	if err != nil {
 		return nil, fmt.Errorf("error creating a0ctl client: could not parse a0 URL %s: %w", urlStr, err)
 	}
 
-	settings, err := config.ReadSettings()
+	config, err := settings.ReadSettings()
 	if err != nil {
 		return nil, fmt.Errorf("error creating a0ctl client: could not read settings: %w", err)
 	}
 
-	username := settings.GetUsername()
+	username := config.GetUsername()
 	return NewClient(a0URL, token, username), nil
 }
 

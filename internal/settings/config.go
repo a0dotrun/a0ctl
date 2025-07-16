@@ -1,5 +1,4 @@
-// Package config provides config management for CLI
-package config
+package settings
 
 import (
 	"fmt"

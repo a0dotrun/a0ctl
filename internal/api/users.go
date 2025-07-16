@@ -18,7 +18,11 @@ func (c *UsersClient) GetUser() (UserInfo, error) {
 		return UserInfo{}, fmt.Errorf("failed to get user info: %w", err)
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		if err := res.Body.Close(); err != nil {
+			return
+		}
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return UserInfo{}, parseResponseError(res)
