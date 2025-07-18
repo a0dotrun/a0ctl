@@ -68,6 +68,11 @@ func AuthedClient() (*Client, error) {
 	return MakeClient(token)
 }
 
+// UnAuthedClient returns un-authenticated client, a client without the token set
+func UnAuthedClient() (*Client, error) {
+	return MakeClient("")
+}
+
 // MakeClient builds a new API client with the provided token.
 func MakeClient(token string) (*Client, error) {
 	urlStr := settings.GetA0URL()
