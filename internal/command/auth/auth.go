@@ -17,9 +17,7 @@ func New() *cobra.Command {
 		Long:  long,
 	}
 
-	cmd.AddCommand(
-		newWhoAMI(),
-	)
+	cmd.AddCommand(newWhoAMI(), newLogin())
 
 	return cmd
 }
