@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
-	"github.com/a0dotrun/a0ctl/internal/cli"
 	"os"
 	"os/signal"
 	"runtime"
 	"syscall"
+
+	"github.com/a0dotrun/a0ctl/internal/cli"
 )
 
 func main() {
@@ -17,9 +18,7 @@ func run() (exitCode int) {
 	ctx, cancel := newContext()
 	defer cancel()
 
-	exitCode = cli.Run(ctx, os.Args[1:]...)
-
-	return
+	return cli.Run(ctx, os.Args[1:]...)
 }
 
 func newContext() (context.Context, context.CancelFunc) {
