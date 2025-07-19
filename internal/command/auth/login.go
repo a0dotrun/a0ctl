@@ -23,15 +23,13 @@ import (
 	_ "embed"
 )
 
-// FIXME: @sanchitrk
-//
-//go:embed
+//go:embed login.html
 var loginHTML string
 
 func newLogin() *cobra.Command {
 	const (
 		use   = "login"
-		short = "new user logged in"
+		short = "Login to the platform"
 	)
 	cmd := &cobra.Command{
 		Use:               "login",

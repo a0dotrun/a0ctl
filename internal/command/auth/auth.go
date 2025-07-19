@@ -26,8 +26,9 @@ func New() *cobra.Command {
 		Long:  long,
 	}
 
-	cmd.AddCommand(newWhoAMI(), newLogin())
-	flags.AddHeadless(newLogin())
+	loginCmd := newLogin()
+	flags.AddHeadless(loginCmd)
+	cmd.AddCommand(newWhoAMI(), loginCmd)
 
 	return cmd
 }
