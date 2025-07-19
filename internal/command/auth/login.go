@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"html/template"
 	"math/rand"
@@ -13,19 +12,21 @@ import (
 	"time"
 
 	"github.com/a0dotrun/a0ctl/internal/cli"
+	"github.com/a0dotrun/a0ctl/internal/flags"
 	"github.com/a0dotrun/a0ctl/internal/settings"
 
 	"github.com/a0dotrun/a0ctl/internal/api"
 
 	"github.com/pkg/browser"
 	"github.com/spf13/cobra"
+
+	_ "embed"
 )
 
-var LOGIN_HTML string
-
-const (
-	a0DefaultBaseURL = "https://api.a0.tech"
-)
+// FIXME: @sanchitrk
+//
+//go:embed
+var loginHTML string
 
 func newLogin() *cobra.Command {
 	const (
@@ -38,12 +39,39 @@ func newLogin() *cobra.Command {
 		Args:              cobra.NoArgs,
 		ValidArgsFunction: cli.NoFilesArg,
 		RunE:              login,
+		PersistentPreRunE: checkEnvAuth,
 	}
 	return cmd
 }
 
+func exitOnValidAuth(settings *settings.Settings) {
+	username := settings.GetUsername()
+	if len(username) <= 0 {
+		fmt.Println("✔  Success! Existing JWT still valid")
+		return
+	}
+	fmt.Printf("Already signed in as %s. Use %s to log out of this account\n", username, cli.Emph("a0ctl auth logout"))
+}
+
 func login(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true
+
+	config, err := settings.ReadSettings()
+	if err != nil {
+		return fmt.Errorf("could not retrieve local config: %w", err)
+	}
+
+	if api.IsJWTTokenValid(config.GetToken()) {
+		exitOnValidAuth(config)
+		return nil
+	}
+
+	// TODO: @sanchitrk
+	// add support for headless login
+
+	if flags.Headless() {
+		return printHeadlessLoginInstructions(authURLPath)
+	}
 
 	state := randString(32)
 	callbackServer, err := authCallbackServer(state)
@@ -51,7 +79,11 @@ func login(cmd *cobra.Command, args []string) error {
 		return suggestHeadless(cmd, err)
 	}
 
-	url, err := authURL(callbackServer.Port, "", state)
+	// Now, that we got the callback server, let's get the auth URL
+	// for making the auth request
+
+	// NOTE:: path must match the one in the auth server
+	url, err := authURL(callbackServer.Port, authURLPath, state)
 	if err != nil {
 		return fmt.Errorf("failed to get auth URL: %w", err)
 	}
@@ -70,39 +102,23 @@ func login(cmd *cobra.Command, args []string) error {
 		return suggestHeadless(cmd, err)
 	}
 
-	if !api.IsJWTTokenValid(jwt) {
-		return errors.New("invalid token")
-	}
-
-	client, err := api.AuthedClient()
+	username, err := validateToken(jwt)
 	if err != nil {
-		return err
-	}
-
-	user, err := client.Users.GetUser()
-	if err != nil {
-		return err
-	}
-
-	config, err := settings.ReadSettings()
-	if err != nil {
-		return fmt.Errorf("failed to read settings: %w", err)
+		return suggestHeadless(cmd, err)
 	}
 
 	config.SetToken(jwt)
-	if err := settings.TryToPersistChanges(); err != nil {
-		return fmt.Errorf("%w\nIf the issue persists, set your token to the %s environment variable instead", err, cli.Emph(settings.EnvAccessToken))
-	}
+	config.SetUsername(username)
 
-	config.SetUsername(user.Username)
+	settings.PersistChanges()
 
-	fmt.Printf("✔  Success! Logged in as %s\n", user.Username)
+	fmt.Printf("✔  Success! Logged in as %s\n", username)
 
 	return nil
 }
 
 func randString(n int) string {
-	var runes = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	runes := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
 	b := make([]rune, n)
 	for i := range b {
 		b[i] = runes[rand.Intn(len(runes))]
@@ -111,7 +127,7 @@ func randString(n int) string {
 }
 
 func authURL(port int, path, state string) (string, error) {
-	base, err := url.Parse(getA0Url())
+	base, err := url.Parse(settings.GetA0URL())
 	if err != nil {
 		return "", fmt.Errorf("error parsing auth URL: %w", err)
 	}
@@ -171,7 +187,9 @@ func (a authCallback) Result() (string, error) {
 }
 
 func createCallbackServer(ch chan string, state string) (*http.Server, error) {
-	tmpl, err := template.New("login.html").Parse(LOGIN_HTML)
+	// FIXME: @sanchitrk
+	// make html template with path and embed in gobuild
+	tmpl, err := template.New("login.html").Parse(loginHTML)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse login callback template: %w", err)
 	}
@@ -187,7 +205,7 @@ func createCallbackServer(ch chan string, state string) (*http.Server, error) {
 
 		w.WriteHeader(200)
 		tmpl.Execute(w, map[string]string{
-			"assetsURL": getA0Url(),
+			"assetsURL": settings.GetA0URL(), // FIXME: @sanchitrk: later when you make the html
 		})
 	})
 
@@ -215,11 +233,12 @@ func suggestHeadless(cmd *cobra.Command, err error) error {
 	return fmt.Errorf("%w\nIf the issue persists, try running %s", err, cli.Emph(cmdWithFlag))
 }
 
-func getA0Url() string {
-	config, _ := settings.ReadSettings() // ok to ignore, we'll fallback to default
-	url := config.GetBaseURL()
-	if url == "" {
-		url = a0DefaultBaseURL
+func printHeadlessLoginInstructions(path string) error {
+	url, err := authURL(0, path, "")
+	if err != nil {
+		return err
 	}
-	return url
+	fmt.Println("Visit the following URL to login:")
+	fmt.Println(url)
+	return nil
 }
