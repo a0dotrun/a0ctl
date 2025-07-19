@@ -32,8 +32,8 @@ func newLogin() *cobra.Command {
 		short = "Login to the platform"
 	)
 	cmd := &cobra.Command{
-		Use:               "login",
-		Short:             "Login to the platform.",
+		Use:               use,
+		Short:             short,
 		Args:              cobra.NoArgs,
 		ValidArgsFunction: cli.NoFilesArg,
 		RunE:              login,
@@ -63,9 +63,6 @@ func login(cmd *cobra.Command, args []string) error {
 		exitOnValidAuth(config)
 		return nil
 	}
-
-	// TODO: @sanchitrk
-	// add support for headless login
 
 	if flags.Headless() {
 		return printHeadlessLoginInstructions(authURLPath)
