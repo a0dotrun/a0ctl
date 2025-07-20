@@ -18,6 +18,15 @@ func GetA0URL() string {
 	return url
 }
 
+func GetA0HomeURL() string {
+	settings, _ := ReadSettings()
+	url := settings.GetHomeURL()
+	if url == "" {
+		url = settings.GetDefaultHomeURL()
+	}
+	return url
+}
+
 // TryToPersistChanges forces config changes to be written to disk.
 func TryToPersistChanges() error {
 	if err := viper.WriteConfig(); err != nil {

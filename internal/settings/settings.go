@@ -16,6 +16,7 @@ import (
 
 const (
 	a0DefaultBaseURL = "https://api.a0.run"
+	a0DefaultHomeURL = "https://a0.run"
 )
 
 type Settings struct {
@@ -43,6 +44,11 @@ func ReadSettings() (*Settings, error) {
 		return nil, err
 	}
 	err = viper.BindEnv("baseURL", "A0_API_BASEURL")
+	if err != nil {
+		return nil, err
+	}
+
+	err = viper.BindEnv("homeURL", "A0_HOME_BASEURL")
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +113,14 @@ func (s *Settings) GetBaseURL() string {
 
 func (s *Settings) GetDefaultBaseURL() string {
 	return a0DefaultBaseURL
+}
+
+func (s *Settings) GetHomeURL() string {
+	return viper.GetString("homeURL")
+}
+
+func (s *Settings) GetDefaultHomeURL() string {
+	return a0DefaultHomeURL
 }
 
 func (s *Settings) GetUsername() string {

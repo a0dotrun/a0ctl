@@ -77,7 +77,6 @@ func login(cmd *cobra.Command, args []string) error {
 	// Now, that we got the callback server, let's get the auth URL
 	// for making the auth request
 
-	// NOTE:: path must match the one in the auth server
 	url, err := authURL(callbackServer.Port, authURLPath, state)
 	if err != nil {
 		return fmt.Errorf("failed to get auth URL: %w", err)
@@ -122,7 +121,7 @@ func randString(n int) string {
 }
 
 func authURL(port int, path, state string) (string, error) {
-	base, err := url.Parse(settings.GetA0URL())
+	base, err := url.Parse(settings.GetA0HomeURL())
 	if err != nil {
 		return "", fmt.Errorf("error parsing auth URL: %w", err)
 	}
@@ -135,7 +134,7 @@ func authURL(port int, path, state string) (string, error) {
 		values = url.Values{
 			"port":     {strconv.Itoa(port)},
 			"redirect": {"true"},
-			"type":     {"cli"},
+			"type":     {"cli"}, // TODO: @sanchitrk is this needed? as we have specific route already
 		}
 	}
 	if state != "" {
@@ -182,8 +181,6 @@ func (a authCallback) Result() (string, error) {
 }
 
 func createCallbackServer(ch chan string, state string) (*http.Server, error) {
-	// FIXME: @sanchitrk
-	// make html template with path and embed in gobuild
 	tmpl, err := template.New("login.html").Parse(loginHTML)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse login callback template: %w", err)
@@ -199,9 +196,7 @@ func createCallbackServer(ch chan string, state string) (*http.Server, error) {
 		ch <- q.Get("jwt")
 
 		w.WriteHeader(200)
-		tmpl.Execute(w, map[string]string{
-			"assetsURL": settings.GetA0URL(), // FIXME: @sanchitrk: later when you make the html
-		})
+		tmpl.Execute(w, map[string]string{})
 	})
 
 	return &http.Server{Handler: handler}, nil

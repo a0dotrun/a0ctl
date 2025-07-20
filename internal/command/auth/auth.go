@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// authURLPath is the path to the authentication endpoint.
 const authURLPath = "/auth/cli"
 
 func New() *cobra.Command {
