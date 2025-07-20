@@ -40,7 +40,12 @@ func (c *TokensClient) Invalidate() (int64, error) {
 	if err != nil {
 		return 0, fmt.Errorf("failed to request invalidation: %s", err)
 	}
-	defer r.Body.Close()
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+			return
+		}
+	}(r.Body)
 
 	if r.StatusCode != http.StatusOK {
 		return 0, fmt.Errorf("failed to invalidate sessions: %w", parseResponseError(r))

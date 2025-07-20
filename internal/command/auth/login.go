@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"log"
 	"math/rand"
 	"net"
 	"net/http"
@@ -196,7 +197,9 @@ func createCallbackServer(ch chan string, state string) (*http.Server, error) {
 		ch <- q.Get("jwt")
 
 		w.WriteHeader(200)
-		tmpl.Execute(w, map[string]string{})
+		if err := tmpl.Execute(w, map[string]string{}); err != nil {
+			fmt.Printf("failed to execute login template: %v", err)
+		}
 	})
 
 	return &http.Server{Handler: handler}, nil
@@ -209,7 +212,9 @@ func runServer(server *http.Server) (int, error) {
 	}
 
 	go func() {
-		server.Serve(listener)
+		if err := server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			log.Printf("failed to serve: %v", err)
+		}
 	}()
 
 	return listener.Addr().(*net.TCPAddr).Port, nil
