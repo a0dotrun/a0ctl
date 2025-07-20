@@ -29,7 +29,11 @@ func New() *cobra.Command {
 
 	loginCmd := newLogin()
 	logoutCmd := newLogout()
+
 	flags.AddHeadless(loginCmd)
+	// TODO: add support for invalidating session
+	// flags.AddAll(logoutCmd, "Invalidate all sessions for the current user")
+
 	cmd.AddCommand(newWhoAMI(), loginCmd, logoutCmd)
 
 	return cmd
