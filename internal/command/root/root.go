@@ -13,6 +13,7 @@ import (
 	"github.com/a0dotrun/a0ctl/internal/command/version"
 
 	"github.com/a0dotrun/a0ctl/internal/command/auth"
+	"github.com/a0dotrun/a0ctl/internal/command/initialise"
 	"github.com/spf13/cobra"
 )
 
@@ -40,6 +41,7 @@ func New() *cobra.Command {
 		auth.New(),
 		config.New(),
 		deploy.New(),
+		initialise.New(),
 	)
 
 	return root
